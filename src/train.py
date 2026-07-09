@@ -1,12 +1,21 @@
+import os
 import sys
 sys.path.append(".")
+
+import matplotlib
+matplotlib.use("Agg")
+import matplotlib.pyplot as plt
+
+import mlflow
+import mlflow.sklearn
 
 from sklearn.linear_model import LogisticRegression
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.pipeline import Pipeline
 from sklearn.model_selection import GridSearchCV, StratifiedKFold
 from sklearn.metrics import (
-    accuracy_score, precision_score, recall_score, f1_score, roc_auc_score
+    accuracy_score, precision_score, recall_score, f1_score, roc_auc_score,
+    ConfusionMatrixDisplay,
 )
 
 from src.preprocess import load_clean_data, build_preprocessor, split_data
@@ -29,6 +38,8 @@ def evaluate(name, pipeline, X_test, y_test):
 
 
 def main():
+    mlflow.set_experiment("heart-disease-risk")
+
     df = load_clean_data("data/heart_clean.csv")
     X_train, X_test, y_train, y_test = split_data(df)
 
@@ -47,8 +58,8 @@ def main():
     }
 
     cv = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
-
     results = {}
+
     for name, cfg in model_configs.items():
         pipeline = Pipeline(steps=[
             ("preprocess", build_preprocessor()),
@@ -60,7 +71,28 @@ def main():
         print(f"\nBest params for {name}: {search.best_params_}")
         print(f"Best CV ROC-AUC: {search.best_score_:.4f}")
 
-        results[name] = evaluate(name, search.best_estimator_, X_test, y_test)
+        metrics = evaluate(name, search.best_estimator_, X_test, y_test)
+
+        with mlflow.start_run(run_name=name):
+            mlflow.log_params(search.best_params_)
+            mlflow.log_param("model_type", name)
+
+            mlflow.log_metric("cv_roc_auc", search.best_score_)
+            for metric_name, value in metrics.items():
+                mlflow.log_metric(metric_name, value)
+
+            fig, ax = plt.subplots(figsize=(5, 5))
+            ConfusionMatrixDisplay.from_estimator(search.best_estimator_, X_test, y_test, ax=ax)
+            ax.set_title(f"Confusion Matrix - {name}")
+            os.makedirs("reports/figures", exist_ok=True)
+            cm_path = f"reports/figures/confusion_{name.replace(' ', '_')}.png"
+            fig.savefig(cm_path, dpi=150)
+            plt.close(fig)
+            mlflow.log_artifact(cm_path)
+
+            mlflow.sklearn.log_model(search.best_estimator_, name="model")
+
+        results[name] = metrics
 
 
 if __name__ == "__main__":
