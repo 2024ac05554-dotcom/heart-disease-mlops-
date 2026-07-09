@@ -5,5 +5,5 @@ __pycache__/
 mlruns/
 mlflow.db
 *.db
-data/raw/*.raw
+data/raw_cleveland.data
 .env
