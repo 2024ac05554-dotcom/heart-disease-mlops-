@@ -2,6 +2,7 @@ import os
 import sys
 sys.path.append(".")
 
+import joblib
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
@@ -58,7 +59,9 @@ def main():
     }
 
     cv = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
-    results = {}
+
+    results = {}          # name -> metrics dict (includes cv_roc_auc)
+    fitted_models = {}    # name -> actual fitted Pipeline object
 
     for name, cfg in model_configs.items():
         pipeline = Pipeline(steps=[
@@ -72,12 +75,12 @@ def main():
         print(f"Best CV ROC-AUC: {search.best_score_:.4f}")
 
         metrics = evaluate(name, search.best_estimator_, X_test, y_test)
+        metrics["cv_roc_auc"] = search.best_score_
 
         with mlflow.start_run(run_name=name):
             mlflow.log_params(search.best_params_)
             mlflow.log_param("model_type", name)
 
-            mlflow.log_metric("cv_roc_auc", search.best_score_)
             for metric_name, value in metrics.items():
                 mlflow.log_metric(metric_name, value)
 
@@ -93,6 +96,19 @@ def main():
             mlflow.sklearn.log_model(search.best_estimator_, name="model")
 
         results[name] = metrics
+        fitted_models[name] = search.best_estimator_   # keep the real fitted pipeline
+
+    # ---- Champion selection: by CV ROC-AUC (more reliable than a single test split) ----
+    champion_name = max(results, key=lambda n: results[n]["cv_roc_auc"])
+    champion_pipeline = fitted_models[champion_name]
+
+    print(f"\nChampion model: {champion_name} "
+          f"(CV ROC-AUC={results[champion_name]['cv_roc_auc']:.4f}, "
+          f"Test ROC-AUC={results[champion_name]['roc_auc']:.4f})")
+
+    os.makedirs("models", exist_ok=True)
+    joblib.dump(champion_pipeline, "models/model.pkl")
+    print("Saved champion pipeline to models/model.pkl")
 
 
 if __name__ == "__main__":
