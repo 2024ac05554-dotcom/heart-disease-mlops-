@@ -31,3 +31,34 @@ jobs:
         run: pip install -r requirements.txt
       - name: Run unit tests
         run: pytest tests/ -v
+
+  train:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+      - name: Download dataset
+        run: python data/get_data.py
+      - name: Clean data (inline, matches notebook logic)
+        run: |
+          python -c "
+          import pandas as pd
+          df = pd.read_csv('data/heart.csv')
+          df['ca'] = df['ca'].fillna(df['ca'].median())
+          df['thal'] = df['thal'].fillna(df['thal'].median())
+          df['target'] = (df['target'] > 0).astype(int)
+          df.to_csv('data/heart_clean.csv', index=False)
+          print('Cleaned:', df.shape)
+          "
+      - name: Train model
+        run: python src/train.py
+      - name: Upload trained model as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: trained-model
+          path: models/model.pkl
