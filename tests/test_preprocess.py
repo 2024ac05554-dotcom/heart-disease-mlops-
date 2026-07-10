@@ -5,7 +5,7 @@ import pandas as pd
 import numpy as np
 import pytest
 
-from src.preprocess import build_preprocessor, split_data, NUMERIC_COLS, CATEGORICAL_COLS
+from src.preprocess import build_preprocessor, split_data
 
 
 @pytest.fixture
