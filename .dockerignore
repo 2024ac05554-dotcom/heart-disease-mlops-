@@ -1,0 +1,13 @@
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.git/
+.github/
+mlruns/
+mlflow.db
+notebooks/
+tests/
+screenshots/
+reports/
+data/raw_cleveland.data
