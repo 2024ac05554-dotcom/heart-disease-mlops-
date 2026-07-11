@@ -4,7 +4,9 @@
 
 \*\*MLOps Assignment 01 (AIMLCZG523)\*\*
 
+\*\*Student Name - Amit Ashok Saggam\*\*
 
+\*\*Student ID - 2024AC05554\*\*
 
 \## Objective
 
@@ -190,7 +192,7 @@ EDA, and evaluation are in the project report.
 
 
 
-See `reports/MLOps\_Assignment01\_Report.docx` for the full write-up: setup
+See `MLOps_Assignment01_Report.docx` for the full write-up: setup
 
 instructions, EDA and modeling choices, experiment tracking summary, architecture
 
