@@ -9,3 +9,5 @@ ipykernel
 pytest
 flake8
 black
+fastapi
+uvicorn
